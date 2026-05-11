@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getMatches } from '@/api/matches'
+import { getMatches,addMatch } from '@/api/matches'
 interface Match {
   id: number
   name: string
@@ -72,6 +72,8 @@ function submitForm() {
   } else {
     const newId = matchList.value.length ? Math.max(...matchList.value.map(m => m.id)) + 1 : 1
     matchList.value.push({ ...form.value, id: newId })
+      addMatch(form.value)
+
   }
   closeModal()
 }
