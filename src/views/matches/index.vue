@@ -61,7 +61,7 @@ function closeModal() {
   showModal.value = false
 }
 
-function submitForm() {
+async function submitForm() {
   if (!form.value.name || !form.value.team || !form.value.time) {
     alert('请填写必填项：比赛名称、队伍、比赛时间')
     return
@@ -70,9 +70,11 @@ function submitForm() {
     const idx = matchList.value.findIndex(m => m.id === form.value.id)
     if (idx !== -1) matchList.value[idx] = { ...form.value }
   } else {
-    const newId = matchList.value.length ? Math.max(...matchList.value.map(m => m.id)) + 1 : 1
-    matchList.value.push({ ...form.value, id: newId })
-      addMatch(form.value)
+      const res = await addMatch(form.value);
+      if(res.data.code == 0){
+         const res_match = await getMatches()
+        matchList.value = res_match.data;
+      }
 
   }
   closeModal()

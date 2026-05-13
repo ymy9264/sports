@@ -13,10 +13,6 @@ interface Team {
 
 // 模拟数据
 const teamList = ref<Team[]>([
-  { id: 1, name: '洛杉矶湖人', league: 'NBA', city: '洛杉矶', coach: '达尔文·汉姆', founded: 1947 },
-  { id: 2, name: '金州勇士', league: 'NBA', city: '旧金山', coach: '史蒂夫·科尔', founded: 1946 },
-  { id: 3, name: '曼彻斯特联', league: '英超', city: '曼彻斯特', coach: '鲁本·阿莫林', founded: 1878 },
-  { id: 4, name: '阿森纳', league: '英超', city: '伦敦', coach: '米克尔·阿尔塔', founded: 1886 },
 ])
 
 // 搜索
