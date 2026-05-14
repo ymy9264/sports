@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getMatches,addMatch } from '@/api/matches'
+import { getMatches, addMatch, updateMatch, deleteMatch } from '@/api/matches'
+
 interface Match {
   id: number
   name: string
@@ -9,15 +10,14 @@ interface Match {
   status: '未开始' | '进行中' | '已结束'
 }
 
-onMounted(async()=>{
+onMounted(async () => {
   const res = await getMatches()
-  matchList.value = res.data;
+  matchList.value = res.data
 })
 
-
 const matchList = ref<Match[]>([
- // { id: 1, name: 'NBA总决赛', team: '湖人 VS 勇士', time: '2026-05-01', status: '未开始' },
- // { id: 2, name: '英超联赛', team: '曼联 VS 阿森纳', time: '2026-05-03', status: '进行中' },
+  // { id: 1, name: 'NBA总决赛', team: '湖人 VS 勇士', time: '2026-05-01', status: '未开始' },
+  // { id: 2, name: '英超联赛', team: '曼联 VS 阿森纳', time: '2026-05-03', status: '进行中' },
 ])
 
 // 搜索
@@ -26,7 +26,7 @@ const filteredList = computed(() => {
   const k = keyword.value.trim().toLowerCase()
   if (!k) return matchList.value
   return matchList.value.filter(
-    m => m.name.toLowerCase().includes(k) || m.team.toLowerCase().includes(k)
+    (m) => m.name.toLowerCase().includes(k) || m.team.toLowerCase().includes(k),
   )
 })
 
@@ -66,16 +66,21 @@ async function submitForm() {
     alert('请填写必填项：比赛名称、队伍、比赛时间')
     return
   }
-  if (isEdit.value) {
-    const idx = matchList.value.findIndex(m => m.id === form.value.id)
-    if (idx !== -1) matchList.value[idx] = { ...form.value }
-  } else {
-      const res = await addMatch(form.value);
-      if(res.data.code == 0){
-         const res_match = await getMatches()
-        matchList.value = res_match.data;
-      }
+  console.log('isEdit:', isEdit.value)
+  console.log(form.value)
 
+  if (isEdit.value) {
+    const res = await updateMatch(form.value)
+    if (res.data.code == 0) {
+      const resMatch = await getMatches()
+      matchList.value = resMatch.data
+    }
+  } else {
+    const res = await addMatch(form.value)
+    if (res.data.code == 0) {
+      const resMatch = await getMatches()
+      matchList.value = resMatch.data
+    }
   }
   closeModal()
 }
@@ -89,9 +94,13 @@ function openDelete(id: number) {
   showDeleteConfirm.value = true
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (deleteTargetId.value !== null) {
-    matchList.value = matchList.value.filter(m => m.id !== deleteTargetId.value)
+    const res = await deleteMatch(deleteTargetId.value)
+    if (res.data.code === 0) {
+      const resMatch = await getMatches()
+      matchList.value = resMatch.data
+    }
   }
   showDeleteConfirm.value = false
   deleteTargetId.value = null
@@ -104,9 +113,9 @@ function cancelDelete() {
 
 // 状态样式
 const statusClass: Record<Match['status'], string> = {
-  '未开始': 'status-pending',
-  '进行中': 'status-ongoing',
-  '已结束': 'status-ended',
+  未开始: 'status-pending',
+  进行中: 'status-ongoing',
+  已结束: 'status-ended',
 }
 </script>
 
@@ -117,12 +126,7 @@ const statusClass: Record<Match['status'], string> = {
     </div>
 
     <div class="search-bar">
-      <input
-        v-model="keyword"
-        type="text"
-        placeholder="请输入比赛名称"
-        class="search-input"
-      />
+      <input v-model="keyword" type="text" placeholder="请输入比赛名称" class="search-input" />
       <button class="btn btn-default">搜索</button>
       <button class="btn btn-primary" @click="openAdd">新增比赛</button>
     </div>

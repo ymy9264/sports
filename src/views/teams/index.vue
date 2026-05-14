@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getTeams } from '@/api/teams'
+import { getTeams,addTeam,updateTeam,deleteTeam } from '@/api/teams'
 
 interface Team {
   id: number
@@ -63,17 +63,24 @@ function closeModal() {
   showModal.value = false
 }
 
-function submitForm() {
+async function submitForm() {
   if (!form.value.name || !form.value.league || !form.value.city) {
     alert('请填写必填项：球队名称、所属联赛、所在城市')
     return
   }
   if (isEdit.value) {
-    const idx = teamList.value.findIndex(t => t.id === form.value.id)
-    if (idx !== -1) teamList.value[idx] = { ...form.value }
+    const res = await updateTeam(form.value)
+    if(res.data.code === 0){
+      const resTeam = await getTeams()
+      teamList.value = resTeam.data
+    }
+
   } else {
-    const newId = teamList.value.length ? Math.max(...teamList.value.map(t => t.id)) + 1 : 1
-    teamList.value.push({ ...form.value, id: newId })
+     const res = await addTeam(form.value)
+    if(res.data.code === 0){
+      const resTeam = await getTeams()
+      teamList.value = resTeam.data
+    }
   }
   closeModal()
 }
@@ -87,9 +94,13 @@ function openDelete(id: number) {
   showDeleteConfirm.value = true
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (deleteTargetId.value !== null) {
-    teamList.value = teamList.value.filter(t => t.id !== deleteTargetId.value)
+    const res = await deleteTeam(deleteTargetId.value)
+    if(res.data.code === 0){
+      const resTeam = await getTeams()
+      teamList.value = resTeam.data
+    }  
   }
   showDeleteConfirm.value = false
   deleteTargetId.value = null

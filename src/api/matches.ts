@@ -11,3 +11,7 @@ export function addMatch(data: object){
 export function updateMatch(data: object){
     return axios.post(`/api/matches/update`,data)
 }
+
+export function deleteMatch(id: number){
+  return axios.post(`/api/matches/delete`,{ id })
+}

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getPlayers } from '@/api/players'
+import { getPlayers,addPlayer,updatePlayer,deletePlayer } from '@/api/players'
 
 interface Player {
   id: number
@@ -69,17 +69,23 @@ function closeModal() {
   showModal.value = false
 }
 
-function submitForm() {
+async function submitForm() {
   if (!form.value.name || !form.value.team || !form.value.position) {
     alert('请填写必填项：球员姓名、所属球队、位置')
     return
   }
   if (isEdit.value) {
-    const idx = playerList.value.findIndex(p => p.id === form.value.id)
-    if (idx !== -1) playerList.value[idx] = { ...form.value }
+    const res = await updatePlayer(form.value);
+    if(res.data.code === 0){
+    const resPlayer = await getPlayers()
+    playerList.value = resPlayer.data
+    }
   } else {
-    const newId = playerList.value.length ? Math.max(...playerList.value.map(p => p.id)) + 1 : 1
-    playerList.value.push({ ...form.value, id: newId })
+     const res = await addPlayer(form.value);
+    if(res.data.code === 0){
+    const resPlayer = await getPlayers()
+    playerList.value = resPlayer.data
+    }
   }
   closeModal()
 }
@@ -93,9 +99,13 @@ function openDelete(id: number) {
   showDeleteConfirm.value = true
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (deleteTargetId.value !== null) {
-    playerList.value = playerList.value.filter(p => p.id !== deleteTargetId.value)
+    const res =  await deletePlayer(deleteTargetId.value)
+    if(res.data.code === 0){
+      const resPlayer = await getPlayers()
+      playerList.value = resPlayer.data
+    }
   }
   showDeleteConfirm.value = false
   deleteTargetId.value = null
