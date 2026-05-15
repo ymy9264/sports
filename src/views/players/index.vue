@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getPlayers,addPlayer,updatePlayer,deletePlayer } from '@/api/players'
+import { getPlayers, addPlayer, updatePlayer, deletePlayer } from '@/api/players'
 
 interface Player {
   id: number
@@ -12,13 +12,21 @@ interface Player {
   age: number
 }
 
-const playerList = ref<Player[]>([
+const playerList = ref<Player[]>([])
 
-])
-
-
-
-const positionOptions = ['控球后卫', '得分后卫', '小前锋', '大前锋', '中锋', '前锋', '中场', '后卫', '守门员', '右翼', '左翼']
+const positionOptions = [
+  '控球后卫',
+  '得分后卫',
+  '小前锋',
+  '大前锋',
+  '中锋',
+  '前锋',
+  '中场',
+  '后卫',
+  '守门员',
+  '右翼',
+  '左翼',
+]
 
 // 搜索
 const keyword = ref('')
@@ -26,10 +34,10 @@ const filteredList = computed(() => {
   const k = keyword.value.trim().toLowerCase()
   if (!k) return playerList.value
   return playerList.value.filter(
-    p =>
+    (p) =>
       p.name.toLowerCase().includes(k) ||
       p.team.toLowerCase().includes(k) ||
-      p.nationality.toLowerCase().includes(k)
+      p.nationality.toLowerCase().includes(k),
   )
 })
 
@@ -48,10 +56,10 @@ const emptyForm = (): Omit<Player, 'id'> => ({
 
 const form = ref<Player>({ id: 0, ...emptyForm() })
 
-  onMounted(async()=>{
-    const res = await getPlayers()
-    playerList.value = res.data
-  })
+onMounted(async () => {
+  const res = await getPlayers()
+  playerList.value = res.data
+})
 
 function openAdd() {
   isEdit.value = false
@@ -75,16 +83,16 @@ async function submitForm() {
     return
   }
   if (isEdit.value) {
-    const res = await updatePlayer(form.value);
-    if(res.data.code === 0){
-    const resPlayer = await getPlayers()
-    playerList.value = resPlayer.data
+    const res = await updatePlayer(form.value)
+    if (res.data.code === 0) {
+      const resPlayer = await getPlayers()
+      playerList.value = resPlayer.data
     }
   } else {
-     const res = await addPlayer(form.value);
-    if(res.data.code === 0){
-    const resPlayer = await getPlayers()
-    playerList.value = resPlayer.data
+    const res = await addPlayer(form.value)
+    if (res.data.code === 0) {
+      const resPlayer = await getPlayers()
+      playerList.value = resPlayer.data
     }
   }
   closeModal()
@@ -101,8 +109,8 @@ function openDelete(id: number) {
 
 async function confirmDelete() {
   if (deleteTargetId.value !== null) {
-    const res =  await deletePlayer(deleteTargetId.value)
-    if(res.data.code === 0){
+    const res = await deletePlayer(deleteTargetId.value)
+    if (res.data.code === 0) {
       const resPlayer = await getPlayers()
       playerList.value = resPlayer.data
     }
@@ -208,7 +216,13 @@ function cancelDelete() {
           <div class="form-row">
             <div class="form-item">
               <label>号码</label>
-              <input v-model.number="form.number" type="number" placeholder="球衣号码" min="1" max="99" />
+              <input
+                v-model.number="form.number"
+                type="number"
+                placeholder="球衣号码"
+                min="1"
+                max="99"
+              />
             </div>
             <div class="form-item">
               <label>年龄</label>

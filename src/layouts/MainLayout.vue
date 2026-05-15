@@ -1,7 +1,7 @@
 <template>
   <el-container class="layout">
     <el-aside width="220px" class="sidebar">
-      <div class="logo">Sports Admin</div>
+      <div class="logo">游梦体育</div>
 
       <el-menu
         router
@@ -31,6 +31,8 @@
     <el-container>
       <el-header class="header">
         后台管理系统
+          <span class="logout" @click="handleLogout">退出登录</span>
+
       </el-header>
 
       <el-main class="content">
@@ -41,9 +43,15 @@
 </template>
 
 <script setup lang="ts">
-import { RouterView, useRoute } from 'vue-router'
+import { RouterView,useRoute,useRouter } from 'vue-router'
 
 const route = useRoute()
+const router = useRouter()
+
+function handleLogout() {
+  localStorage.removeItem('loginInfo')
+  router.push('/login')
+}
 </script>
 
 <style scoped>
@@ -72,6 +80,7 @@ const route = useRoute()
 
   display: flex;
   align-items: center;
+  justify-content: space-between;  /* 加这一行让两端对齐 */
 
   font-weight: bold;
 }
@@ -83,5 +92,18 @@ const route = useRoute()
 
 :deep(.el-menu) {
   border-right: none;
+}
+
+
+
+.logout {
+  font-size: 14px;
+  color: #999;
+  cursor: pointer;
+  font-weight: normal;
+}
+
+.logout:hover {
+  color: #ff4d4f;
 }
 </style>

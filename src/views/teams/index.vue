@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getTeams,addTeam,updateTeam,deleteTeam } from '@/api/teams'
+import { getTeams, addTeam, updateTeam, deleteTeam } from '@/api/teams'
 
 interface Team {
   id: number
@@ -12,8 +12,7 @@ interface Team {
 }
 
 // 模拟数据
-const teamList = ref<Team[]>([
-])
+const teamList = ref<Team[]>([])
 
 // 搜索
 const searchText = ref('')
@@ -21,10 +20,10 @@ const filteredList = computed(() => {
   const keyword = searchText.value.trim().toLowerCase()
   if (!keyword) return teamList.value
   return teamList.value.filter(
-    t =>
+    (t) =>
       t.name.toLowerCase().includes(keyword) ||
       t.league.toLowerCase().includes(keyword) ||
-      t.city.toLowerCase().includes(keyword)
+      t.city.toLowerCase().includes(keyword),
   )
 })
 
@@ -42,10 +41,10 @@ const emptyForm = (): Omit<Team, 'id'> => ({
 
 const form = ref<Team>({ id: 0, ...emptyForm() })
 
-  onMounted(async()=>{
-    const res = await getTeams()
-    teamList.value = res.data
-  })
+onMounted(async () => {
+  const res = await getTeams()
+  teamList.value = res.data
+})
 
 function openAdd() {
   isEdit.value = false
@@ -70,14 +69,13 @@ async function submitForm() {
   }
   if (isEdit.value) {
     const res = await updateTeam(form.value)
-    if(res.data.code === 0){
+    if (res.data.code === 0) {
       const resTeam = await getTeams()
       teamList.value = resTeam.data
     }
-
   } else {
-     const res = await addTeam(form.value)
-    if(res.data.code === 0){
+    const res = await addTeam(form.value)
+    if (res.data.code === 0) {
       const resTeam = await getTeams()
       teamList.value = resTeam.data
     }
@@ -97,10 +95,10 @@ function openDelete(id: number) {
 async function confirmDelete() {
   if (deleteTargetId.value !== null) {
     const res = await deleteTeam(deleteTargetId.value)
-    if(res.data.code === 0){
+    if (res.data.code === 0) {
       const resTeam = await getTeams()
       teamList.value = resTeam.data
-    }  
+    }
   }
   showDeleteConfirm.value = false
   deleteTargetId.value = null
