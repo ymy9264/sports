@@ -5,9 +5,10 @@ import { getMatches, addMatch, updateMatch, deleteMatch } from '@/api/matches'
 interface Match {
   id: number
   name: string
-  team: string
-  time: string
-  status: '未开始' | '进行中' | '已结束'
+  home_team: string
+  visit_team: string
+  match_time: string
+  score: string
 }
 
 onMounted(async () => {
@@ -15,10 +16,7 @@ onMounted(async () => {
   matchList.value = res.data
 })
 
-const matchList = ref<Match[]>([
-  // { id: 1, name: 'NBA总决赛', team: '湖人 VS 勇士', time: '2026-05-01', status: '未开始' },
-  // { id: 2, name: '英超联赛', team: '曼联 VS 阿森纳', time: '2026-05-03', status: '进行中' },
-])
+const matchList = ref<Match[]>([])
 
 // 搜索
 const keyword = ref('')
@@ -26,7 +24,10 @@ const filteredList = computed(() => {
   const k = keyword.value.trim().toLowerCase()
   if (!k) return matchList.value
   return matchList.value.filter(
-    (m) => m.name.toLowerCase().includes(k) || m.team.toLowerCase().includes(k),
+    (m) =>
+      m.name.toLowerCase().includes(k) ||
+      m.home_team.toLowerCase().includes(k) ||
+      m.visit_team.toLowerCase().includes(k),
   )
 })
 
@@ -34,13 +35,12 @@ const filteredList = computed(() => {
 const showModal = ref(false)
 const isEdit = ref(false)
 
-const statusOptions: Match['status'][] = ['未开始', '进行中', '已结束']
-
 const emptyForm = (): Omit<Match, 'id'> => ({
   name: '',
-  team: '',
-  time: '',
-  status: '未开始',
+  home_team: '',
+  visit_team: '',
+  match_time: '',
+  score: '',
 })
 
 const form = ref<Match>({ id: 0, ...emptyForm() })
@@ -62,12 +62,10 @@ function closeModal() {
 }
 
 async function submitForm() {
-  if (!form.value.name || !form.value.team || !form.value.time) {
-    alert('请填写必填项：比赛名称、队伍、比赛时间')
+  if (!form.value.name || !form.value.home_team || !form.value.visit_team || !form.value.match_time) {
+    alert('请填写必填项：联赛、主队、客队、比赛时间')
     return
   }
-  console.log('isEdit:', isEdit.value)
-  console.log(form.value)
 
   if (isEdit.value) {
     const res = await updateMatch(form.value)
@@ -110,13 +108,6 @@ function cancelDelete() {
   showDeleteConfirm.value = false
   deleteTargetId.value = null
 }
-
-// 状态样式
-const statusClass: Record<Match['status'], string> = {
-  未开始: 'status-pending',
-  进行中: 'status-ongoing',
-  已结束: 'status-ended',
-}
 </script>
 
 <template>
@@ -126,7 +117,7 @@ const statusClass: Record<Match['status'], string> = {
     </div>
 
     <div class="search-bar">
-      <input v-model="keyword" type="text" placeholder="请输入比赛名称" class="search-input" />
+      <input v-model="keyword" type="text" placeholder="请输入联赛或球队名称" class="search-input" />
       <button class="btn btn-default">搜索</button>
       <button class="btn btn-primary" @click="openAdd">新增比赛</button>
     </div>
@@ -136,27 +127,25 @@ const statusClass: Record<Match['status'], string> = {
         <thead>
           <tr>
             <th>ID</th>
-            <th>比赛名称</th>
-            <th>队伍</th>
+            <th>联赛</th>
+            <th>主队</th>
+            <th>客队</th>
             <th>比赛时间</th>
-            <th>状态</th>
+            <th>比分</th>
             <th>操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="filteredList.length === 0">
-            <td colspan="6" class="empty-tip">暂无数据</td>
+            <td colspan="7" class="empty-tip">暂无数据</td>
           </tr>
           <tr v-for="item in filteredList" :key="item.id">
             <td>{{ item.id }}</td>
             <td>{{ item.name }}</td>
-            <td>{{ item.team }}</td>
-            <td>{{ item.time }}</td>
-            <td>
-              <span class="status-tag" :class="statusClass[item.status]">
-                {{ item.status }}
-              </span>
-            </td>
+            <td>{{ item.home_team }}</td>
+            <td>{{ item.visit_team }}</td>
+            <td>{{ item.match_time }}</td>
+            <td>{{ item.score }}</td>
             <td>
               <button class="btn-link edit" @click="openEdit(item)">编辑</button>
               <span class="divider">|</span>
@@ -176,22 +165,28 @@ const statusClass: Record<Match['status'], string> = {
         </div>
         <div class="modal-body">
           <div class="form-item">
-            <label>比赛名称 <span class="required">*</span></label>
-            <input v-model="form.name" type="text" placeholder="请输入比赛名称" />
+            <label>联赛 <span class="required">*</span></label>
+            <input v-model="form.name" type="text" placeholder="请输入联赛名称" />
           </div>
-          <div class="form-item">
-            <label>队伍 <span class="required">*</span></label>
-            <input v-model="form.team" type="text" placeholder="如：湖人 VS 勇士" />
+          <div class="form-row">
+            <div class="form-item">
+              <label>主队 <span class="required">*</span></label>
+              <input v-model="form.home_team" type="text" placeholder="请输入主队名称" />
+            </div>
+            <div class="form-item">
+              <label>客队 <span class="required">*</span></label>
+              <input v-model="form.visit_team" type="text" placeholder="请输入客队名称" />
+            </div>
           </div>
-          <div class="form-item">
-            <label>比赛时间 <span class="required">*</span></label>
-            <input v-model="form.time" type="date" />
-          </div>
-          <div class="form-item">
-            <label>状态</label>
-            <select v-model="form.status">
-              <option v-for="s in statusOptions" :key="s" :value="s">{{ s }}</option>
-            </select>
+          <div class="form-row">
+            <div class="form-item">
+              <label>比赛时间 <span class="required">*</span></label>
+              <input v-model="form.match_time" type="datetime-local" />
+            </div>
+            <div class="form-item">
+              <label>比分</label>
+              <input v-model="form.score" type="text" placeholder="如：2-1" />
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -323,30 +318,6 @@ const statusClass: Record<Match['status'], string> = {
   padding: 40px 0;
 }
 
-/* 状态标签 */
-.status-tag {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-pending {
-  background: #fff7e6;
-  color: #d46b08;
-}
-
-.status-ongoing {
-  background: #e6f7ff;
-  color: #0958d9;
-}
-
-.status-ended {
-  background: #f5f5f5;
-  color: #8c8c8c;
-}
-
 .btn-link {
   background: none;
   border: none;
@@ -386,7 +357,7 @@ const statusClass: Record<Match['status'], string> = {
 .modal {
   background: #fff;
   border-radius: 8px;
-  width: 480px;
+  width: 520px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
 }
 
@@ -431,6 +402,12 @@ const statusClass: Record<Match['status'], string> = {
   margin: 0;
   color: #555;
   font-size: 14px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
 }
 
 .form-item {
