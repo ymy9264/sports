@@ -49,7 +49,11 @@ onMounted(()=>{
   })
 })
 </script>
-
+<style>
+body{
+  margin:0
+}
+</style>
 <style scoped>
 .cards-wrapper {
   display: flex;

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { getMatches, addMatch, updateMatch, deleteMatch } from '@/api/matches'
+import { crawlerMatches } from '@/api/crawler'
 
 interface Match {
   id: number
@@ -59,6 +60,12 @@ function openEdit(match: Match) {
 
 function closeModal() {
   showModal.value = false
+}
+
+async function fetchData() {
+  await crawlerMatches()
+  const resMatch = await getMatches()
+  matchList.value = resMatch.data
 }
 
 async function submitForm() {
@@ -120,6 +127,7 @@ function cancelDelete() {
       <input v-model="keyword" type="text" placeholder="请输入联赛或球队名称" class="search-input" />
       <button class="btn btn-default">搜索</button>
       <button class="btn btn-primary" @click="openAdd">新增比赛</button>
+      <button class="btn btn-warning" @click="fetchData">更新数据</button>
     </div>
 
     <div class="table-wrapper">
@@ -449,5 +457,9 @@ function cancelDelete() {
   gap: 10px;
   padding: 12px 20px;
   border-top: 1px solid #f0f0f0;
+}
+.btn-warning {
+  background: #fa8c16;
+  color: #fff;
 }
 </style>
