@@ -25,6 +25,10 @@
         <el-menu-item index="/players">
           球员管理
         </el-menu-item>
+
+          <el-menu-item index="/users">
+          用户管理
+        </el-menu-item>
       </el-menu>
     </el-aside>
 

@@ -1,5 +1,5 @@
-import axios from 'axios'
+import request from "./request"
 
 export function crawlerMatches() {
-  return axios.get('/api/crawler/matches')
+  return request.get('/api/crawler/matches')
 }

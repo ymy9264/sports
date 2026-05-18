@@ -29,7 +29,7 @@ const loginData = ref<loginForm>({ username: '', password: '' })
 async function handleLogin() {
   const res = await userLogin(loginData.value)
   if (res.data.code === 0) {
-    localStorage.setItem('loginInfo','logged')
+    localStorage.setItem('loginInfo',res.data.token)
     router.push('/dashboard')
   } else {
     alert('登录失败')

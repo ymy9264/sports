@@ -1,5 +1,5 @@
-import axios from 'axios'
+import request from "./request"
 
 export function userLogin(data: object){
-  return axios.post(`/api/login`,data)
+  return request.post(`/api/login`,data)
 }
