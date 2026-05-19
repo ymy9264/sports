@@ -1,228 +1,218 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getUsers,addUser,updateUser,deleteUser,toggleUserStatus } from '@/api/users'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getUsers, addUser, updateUser, deleteUser, toggleUserStatus } from '@/api/users'
 
 interface User {
   id: number
   username: string
-  password:string
+  password: string
   type: string
-  status:number
-
+  status: number
 }
 
-// 模拟数据
 const userList = ref<User[]>([])
-
-// 搜索
 const searchText = ref('')
+const showDialog = ref(false)
+const isEdit = ref(false)
+
+const emptyForm = (): User => ({
+  id: 0,
+  username: '',
+  password: '',
+  type: 'normal',
+  status: 1,
+})
+
+const form = ref<User>(emptyForm())
+
+onMounted(() => {
+  loadList()
+})
+
+async function loadList() {
+  const res = await getUsers()
+  userList.value = res.data
+}
+
 const filteredList = computed(() => {
   const keyword = searchText.value.trim().toLowerCase()
   if (!keyword) return userList.value
+
   return userList.value.filter(
-    (t) =>
-      t.username.toLowerCase().includes(keyword) ||
-      t.type.toLowerCase().includes(keyword) 
+    (u) =>
+      u.username.toLowerCase().includes(keyword) ||
+      u.type.toLowerCase().includes(keyword),
   )
-})
-
-// 弹窗
-const showModal = ref(false)
-const isEdit = ref(false)
-
-const emptyForm = (): Omit<User, 'id'> => ({
-  username: '',
-  password:'',
-  type: '',
-  status: 1
-})
-
-const form = ref<User>({ id: 0, ...emptyForm() })
-
-onMounted(async () => {
-  const res = await getUsers()
-  userList.value = res.data
 })
 
 function openAdd() {
   isEdit.value = false
-  form.value = { id: 0, ...emptyForm() }
-  showModal.value = true
+  form.value = emptyForm()
+  showDialog.value = true
 }
 
-function openEdit(team: User) {
+function openEdit(row: User) {
   isEdit.value = true
-  form.value = { ...team }
-  showModal.value = true
-}
-
-function closeModal() {
-  showModal.value = false
+  form.value = { ...row, password: '' }
+  showDialog.value = true
 }
 
 async function submitForm() {
-  if (!form.value.username || (!isEdit.value && !form.value.password) ) {
-    alert('请填写必填项：用户名、密码')
+  if (!form.value.username || (!isEdit.value && !form.value.password)) {
+    ElMessage.warning('请填写必填项：用户名、密码')
     return
   }
-  if (isEdit.value) {
-    const res = await updateUser(form.value)
-    if (res.data.code === 0) {
-      const resTeam = await getUsers()
-      userList.value = resTeam.data
-    }
-  } else {
-    const res = await addUser(form.value)
-    if (res.data.code === 0) {
-      const resTeam = await getUsers()
-      userList.value = resTeam.data
-    }
+
+  const res = isEdit.value ? await updateUser(form.value) : await addUser(form.value)
+
+  if (res.data.code === 0) {
+    ElMessage.success(isEdit.value ? '修改成功' : '新增成功')
+    showDialog.value = false
+    await loadList()
   }
-  closeModal()
 }
 
-// 删除
-const deleteTargetId = ref<number | null>(null)
-const showDeleteConfirm = ref(false)
+async function handleDelete(id: number) {
+  try {
+    await ElMessageBox.confirm('确定要删除这名用户吗？此操作不可恢复。', '确认删除', {
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
 
-function openDelete(id: number) {
-  deleteTargetId.value = id
-  showDeleteConfirm.value = true
-}
+    const res = await deleteUser(id)
 
-async function confirmDelete() {
-  if (deleteTargetId.value !== null) {
-    const res = await deleteUser(deleteTargetId.value)
     if (res.data.code === 0) {
-      const resTeam = await getUsers()
-      userList.value = resTeam.data
+      ElMessage.success('删除成功')
+      await loadList()
     }
+  } catch {
+    // 取消删除
   }
-  showDeleteConfirm.value = false
-  deleteTargetId.value = null
 }
 
-function cancelDelete() {
-  showDeleteConfirm.value = false
-  deleteTargetId.value = null
-}
+async function toggleStatus(row: User) {
+  const text = row.status === 1 ? '禁用' : '启用'
 
-async function toggleStatus(id: number){
-    const res = await toggleUserStatus(id)
-   if (res.data.code === 0) {
-      const resTeam = await getUsers()
-      userList.value = resTeam.data
+  try {
+    await ElMessageBox.confirm(`确定要${text}该用户吗？`, `${text}用户`, {
+      confirmButtonText: text,
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+
+    const res = await toggleUserStatus(row.id)
+
+    if (res.data.code === 0) {
+      ElMessage.success(`${text}成功`)
+      await loadList()
     }
+  } catch {
+    // 取消操作
+  }
 }
-
-
 </script>
 
 <template>
-  <div class="teams-page">
-    <!-- 页头 -->
+  <div class="users-page">
     <div class="page-header">
       <h2>用户管理</h2>
     </div>
 
-    <!-- 搜索栏 -->
-    <div class="search-bar">
-      <input
-        v-model="searchText"
-        type="text"
-        placeholder="请输入用户名、组别或状态"
-        class="search-input"
-      />
-      <button class="btn btn-default">搜索</button>
-        <button class="btn btn-primary" @click="openAdd">新增用户</button>
+    <el-card>
+      <div class="toolbar">
+        <el-input
+          v-model="searchText"
+          placeholder="请输入用户名或组别"
+          clearable
+          style="width: 280px"
+        />
 
-    </div>
-
-    <!-- 表格 -->
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>用户名</th>
-            <th>组别</th>
-            <th>状态</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="filteredList.length === 0">
-            <td colspan="7" class="empty-tip">暂无数据</td>
-          </tr>
-          <tr v-for="user in filteredList" :key="user.id">
-            <td>{{ user.id }}</td>
-            <td>{{ user.username }}</td>
-            <td>{{ user.type }}</td>
-            <td v-if="user.status == 1">启用</td>
-            <td v-else>禁用</td>
-              <td>
-              <button class="btn-link edit" @click="openEdit(user)">编辑</button>
-              <span class="divider">|</span>
-            <button class="btn-link toggle-enable" v-if="user.status == 1" @click="toggleStatus(user.id)">禁用</button>
-                        <button class="btn-link toggle-disable" v-else  @click="toggleStatus(user.id)">启用</button>
-  
-            <span class="divider">|</span>
-
-
-              <button class="btn-link delete" @click="openDelete(user.id)">删除</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-   <!-- 新增/编辑弹窗 -->
-    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-      <div class="modal">
-        <div class="modal-header">
-          <h3>{{ isEdit ? '编辑用户' : '新增用户' }}</h3>
-          <button class="modal-close" @click="closeModal">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-item">
-            <label>用户名 <span class="required">*</span></label>
-            <input v-model="form.username" type="text" placeholder="请输入用户名" />
-          </div>
-   
-          <div class="form-item">
-            <label>密码 <span class="required">*</span></label>
-            <input v-model="form.password" type="password" placeholder="若为空，则不修改密码" />
-          </div>
-     
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-default" @click="closeModal">取消</button>
-          <button class="btn btn-primary" @click="submitForm">确定</button>
-        </div>
+        <el-button type="primary" @click="openAdd">新增用户</el-button>
       </div>
-    </div>
 
-    <!-- 删除确认弹窗 -->
-    <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="cancelDelete">
-      <div class="modal modal-sm">
-        <div class="modal-header">
-          <h3>确认删除</h3>
-          <button class="modal-close" @click="cancelDelete">✕</button>
-        </div>
-        <div class="modal-body">
-          <p>确定要删除这名用户吗？此操作不可恢复。</p>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-default" @click="cancelDelete">取消</button>
-          <button class="btn btn-danger" @click="confirmDelete">确认删除</button>
-        </div>
-      </div>
-    </div>
-   
+      <el-table :data="filteredList" border stripe style="width: 100%">
+        <el-table-column prop="id" label="ID" width="80" sortable />
+        <el-table-column prop="username" label="用户名" sortable />
+        <el-table-column prop="type" label="组别" width="140">
+          <template #default="{ row }">
+            <el-tag :type="row.type === 'admin' ? 'danger' : 'info'">
+              {{ row.type }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="status" label="状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'info'">
+              {{ row.status === 1 ? '启用' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="220">
+          <template #default="{ row }">
+            <el-button type="primary" link @click="openEdit(row)">编辑</el-button>
+
+            <el-button
+              :type="row.status === 1 ? 'warning' : 'success'"
+              link
+              @click="toggleStatus(row)"
+            >
+              {{ row.status === 1 ? '禁用' : '启用' }}
+            </el-button>
+
+            <el-button type="danger" link @click="handleDelete(row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-dialog
+      v-model="showDialog"
+      :title="isEdit ? '编辑用户' : '新增用户'"
+      width="480px"
+    >
+      <el-form :model="form" label-width="80px">
+        <el-form-item label="用户名" required>
+          <el-input v-model="form.username" placeholder="请输入用户名" />
+        </el-form-item>
+
+        <el-form-item :label="isEdit ? '新密码' : '密码'" :required="!isEdit">
+          <el-input
+            v-model="form.password"
+            type="password"
+            show-password
+            :placeholder="isEdit ? '若为空，则不修改密码' : '请输入密码'"
+          />
+        </el-form-item>
+
+        <el-form-item label="组别">
+          <el-select v-model="form.type" style="width: 100%">
+            <el-option label="管理员" value="admin" />
+            <el-option label="普通用户" value="normal" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="状态">
+          <el-radio-group v-model="form.status">
+            <el-radio :label="1">启用</el-radio>
+            <el-radio :label="0">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="showDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitForm">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.teams-page {
+.users-page {
   padding: 20px;
 }
 
@@ -236,223 +226,9 @@ async function toggleStatus(id: number){
   color: #333;
 }
 
-/* 搜索栏 */
-.search-bar {
+.toolbar {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
-}
-
-.search-input {
-  width: 260px;
-  padding: 6px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.search-input:focus {
-  border-color: #1890ff;
-}
-
-/* 按钮 */
-.btn {
-  padding: 6px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: opacity 0.2s;
-}
-
-.btn:hover {
-  opacity: 0.85;
-}
-
-.btn-default {
-  background: #fff;
-  border-color: #d9d9d9;
-  color: #333;
-}
-
-.btn-primary {
-  background: #1890ff;
-  color: #fff;
-}
-
-.btn-danger {
-  background: #ff4d4f;
-  color: #fff;
-}
-
-.toggle-enable { color: #fa8c16; }
-.toggle-disable { color: #52c41a; }
-/* 表格 */
-.table-wrapper {
-  border: 1px solid #f0f0f0;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.data-table th,
-.data-table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.data-table th {
-  background: #fafafa;
-  font-weight: 600;
-  color: #333;
-}
-
-.data-table tr:last-child td {
-  border-bottom: none;
-}
-
-.data-table tbody tr:hover {
-  background: #f5f9ff;
-}
-
-.empty-tip {
-  text-align: center;
-  color: #999;
-  padding: 40px 0;
-}
-
-/* 操作按钮 */
-.btn-link {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 14px;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.btn-link:hover {
-  opacity: 0.75;
-}
-
-.btn-link.edit {
-  color: #1890ff;
-}
-
-.btn-link.delete {
-  color: #ff4d4f;
-}
-
-.divider {
-  color: #d9d9d9;
-  margin: 0 8px;
-}
-
-/* 弹窗 */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: #fff;
-  border-radius: 8px;
-  width: 480px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
-}
-
-.modal-sm {
-  width: 360px;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.modal-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin: 0;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: #999;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0;
-}
-
-.modal-close:hover {
-  color: #333;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-body p {
-  margin: 0;
-  color: #555;
-  font-size: 14px;
-}
-
-/* 表单 */
-.form-item {
-  margin-bottom: 16px;
-}
-
-.form-item label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  color: #333;
-}
-
-.required {
-  color: #ff4d4f;
-}
-
-.form-item input {
-  width: 100%;
-  padding: 7px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.2s;
-}
-
-.form-item input:focus {
-  border-color: #1890ff;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 12px 20px;
-  border-top: 1px solid #f0f0f0;
 }
 </style>

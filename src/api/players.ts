@@ -1,17 +1,17 @@
-import axios from 'axios'
+import request from "./request"
 
 export function getPlayers(){
-  return axios.get(`/api/players`)
+  return request.get(`/api/players`)
 }
 
 export function addPlayer(data: object){
-  return axios.post(`/api/players/save`,data)
+  return request.post(`/api/players/save`,data)
 }
 
 export function updatePlayer(data: object){
-    return axios.post(`/api/players/update`,data)
+    return request.post(`/api/players/update`,data)
 }
 
 export function deletePlayer(id: number){
-  return axios.post(`/api/players/delete`,{ id })
+  return request.post(`/api/players/delete`,{ id })
 }

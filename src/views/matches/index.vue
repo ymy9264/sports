@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getMatches, addMatch, updateMatch, deleteMatch } from '@/api/matches'
 import { crawlerMatches } from '@/api/crawler'
 
@@ -12,18 +13,35 @@ interface Match {
   score: string
 }
 
-onMounted(async () => {
-  const res = await getMatches()
-  matchList.value = res.data
+const matchList = ref<Match[]>([])
+const keyword = ref('')
+const showDialog = ref(false)
+const isEdit = ref(false)
+
+const emptyForm = (): Match => ({
+  id: 0,
+  name: '',
+  home_team: '',
+  visit_team: '',
+  match_time: '',
+  score: '',
 })
 
-const matchList = ref<Match[]>([])
+const form = ref<Match>(emptyForm())
 
-// 搜索
-const keyword = ref('')
+onMounted(() => {
+  loadList()
+})
+
+async function loadList() {
+  const res = await getMatches()
+  matchList.value = res.data
+}
+
 const filteredList = computed(() => {
   const k = keyword.value.trim().toLowerCase()
   if (!k) return matchList.value
+
   return matchList.value.filter(
     (m) =>
       m.name.toLowerCase().includes(k) ||
@@ -32,88 +50,56 @@ const filteredList = computed(() => {
   )
 })
 
-// 弹窗
-const showModal = ref(false)
-const isEdit = ref(false)
-
-const emptyForm = (): Omit<Match, 'id'> => ({
-  name: '',
-  home_team: '',
-  visit_team: '',
-  match_time: '',
-  score: '',
-})
-
-const form = ref<Match>({ id: 0, ...emptyForm() })
-
 function openAdd() {
   isEdit.value = false
-  form.value = { id: 0, ...emptyForm() }
-  showModal.value = true
+  form.value = emptyForm()
+  showDialog.value = true
 }
 
-function openEdit(match: Match) {
+function openEdit(row: Match) {
   isEdit.value = true
-  form.value = { ...match }
-  showModal.value = true
-}
-
-function closeModal() {
-  showModal.value = false
-}
-
-async function fetchData() {
-  await crawlerMatches()
-  const resMatch = await getMatches()
-  matchList.value = resMatch.data
+  form.value = { ...row }
+  showDialog.value = true
 }
 
 async function submitForm() {
   if (!form.value.name || !form.value.home_team || !form.value.visit_team || !form.value.match_time) {
-    alert('请填写必填项：联赛、主队、客队、比赛时间')
+    ElMessage.warning('请填写必填项：联赛、主队、客队、比赛时间')
     return
   }
 
-  if (isEdit.value) {
-    const res = await updateMatch(form.value)
-    if (res.data.code == 0) {
-      const resMatch = await getMatches()
-      matchList.value = resMatch.data
-    }
-  } else {
-    const res = await addMatch(form.value)
-    if (res.data.code == 0) {
-      const resMatch = await getMatches()
-      matchList.value = resMatch.data
-    }
+  const res = isEdit.value ? await updateMatch(form.value) : await addMatch(form.value)
+
+  if (res.data.code === 0) {
+    ElMessage.success(isEdit.value ? '修改成功' : '新增成功')
+    showDialog.value = false
+    await loadList()
   }
-  closeModal()
 }
 
-// 删除
-const deleteTargetId = ref<number | null>(null)
-const showDeleteConfirm = ref(false)
+async function handleDelete(id: number) {
+  try {
+    await ElMessageBox.confirm('确定要删除这场比赛吗？此操作不可恢复。', '确认删除', {
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
 
-function openDelete(id: number) {
-  deleteTargetId.value = id
-  showDeleteConfirm.value = true
-}
+    const res = await deleteMatch(id)
 
-async function confirmDelete() {
-  if (deleteTargetId.value !== null) {
-    const res = await deleteMatch(deleteTargetId.value)
     if (res.data.code === 0) {
-      const resMatch = await getMatches()
-      matchList.value = resMatch.data
+      ElMessage.success('删除成功')
+      await loadList()
     }
+  } catch {
+    // 用户点取消，不处理
   }
-  showDeleteConfirm.value = false
-  deleteTargetId.value = null
 }
 
-function cancelDelete() {
-  showDeleteConfirm.value = false
-  deleteTargetId.value = null
+async function fetchData() {
+  await crawlerMatches()
+  await loadList()
+  ElMessage.success('数据更新成功')
 }
 </script>
 
@@ -123,103 +109,68 @@ function cancelDelete() {
       <h2>比赛管理</h2>
     </div>
 
-    <div class="search-bar">
-      <input v-model="keyword" type="text" placeholder="请输入联赛或球队名称" class="search-input" />
-      <button class="btn btn-default">搜索</button>
-      <button class="btn btn-primary" @click="openAdd">新增比赛</button>
-      <button class="btn btn-warning" @click="fetchData">更新数据</button>
-    </div>
+    <el-card>
+      <div class="toolbar">
+        <el-input
+          v-model="keyword"
+          placeholder="请输入联赛或球队名称"
+          clearable
+          style="width: 260px"
+        />
 
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>联赛</th>
-            <th>主队</th>
-            <th>客队</th>
-            <th>比赛时间</th>
-            <th>比分</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="filteredList.length === 0">
-            <td colspan="7" class="empty-tip">暂无数据</td>
-          </tr>
-          <tr v-for="item in filteredList" :key="item.id">
-            <td>{{ item.id }}</td>
-            <td>{{ item.name }}</td>
-            <td>{{ item.home_team }}</td>
-            <td>{{ item.visit_team }}</td>
-            <td>{{ item.match_time }}</td>
-            <td>{{ item.score }}</td>
-            <td>
-              <button class="btn-link edit" @click="openEdit(item)">编辑</button>
-              <span class="divider">|</span>
-              <button class="btn-link delete" @click="openDelete(item.id)">删除</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 新增/编辑弹窗 -->
-    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-      <div class="modal">
-        <div class="modal-header">
-          <h3>{{ isEdit ? '编辑比赛' : '新增比赛' }}</h3>
-          <button class="modal-close" @click="closeModal">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-item">
-            <label>联赛 <span class="required">*</span></label>
-            <input v-model="form.name" type="text" placeholder="请输入联赛名称" />
-          </div>
-          <div class="form-row">
-            <div class="form-item">
-              <label>主队 <span class="required">*</span></label>
-              <input v-model="form.home_team" type="text" placeholder="请输入主队名称" />
-            </div>
-            <div class="form-item">
-              <label>客队 <span class="required">*</span></label>
-              <input v-model="form.visit_team" type="text" placeholder="请输入客队名称" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-item">
-              <label>比赛时间 <span class="required">*</span></label>
-              <input v-model="form.match_time" type="datetime-local" />
-            </div>
-            <div class="form-item">
-              <label>比分</label>
-              <input v-model="form.score" type="text" placeholder="如：2-1" />
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-default" @click="closeModal">取消</button>
-          <button class="btn btn-primary" @click="submitForm">确定</button>
-        </div>
+        <el-button type="primary" @click="openAdd">新增比赛</el-button>
+        <el-button type="warning" @click="fetchData">更新数据</el-button>
       </div>
-    </div>
 
-    <!-- 删除确认弹窗 -->
-    <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="cancelDelete">
-      <div class="modal modal-sm">
-        <div class="modal-header">
-          <h3>确认删除</h3>
-          <button class="modal-close" @click="cancelDelete">✕</button>
-        </div>
-        <div class="modal-body">
-          <p>确定要删除这场比赛吗？此操作不可恢复。</p>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-default" @click="cancelDelete">取消</button>
-          <button class="btn btn-danger" @click="confirmDelete">确认删除</button>
-        </div>
-      </div>
-    </div>
+      <el-table :data="filteredList" border stripe style="width: 100%">
+        <el-table-column prop="id" label="ID" width="80" sortable />
+        <el-table-column prop="name" label="联赛" />
+        <el-table-column prop="home_team" label="主队" />
+        <el-table-column prop="visit_team" label="客队" />
+        <el-table-column prop="match_time" label="比赛时间" sortable />
+        <el-table-column prop="score" label="比分" width="100" />
+
+        <el-table-column label="操作" width="160">
+          <template #default="{ row }">
+            <el-button type="primary" link @click="openEdit(row)">编辑</el-button>
+            <el-button type="danger" link @click="handleDelete(row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-dialog
+      v-model="showDialog"
+      :title="isEdit ? '编辑比赛' : '新增比赛'"
+      width="520px"
+    >
+      <el-form :model="form" label-width="80px">
+        <el-form-item label="联赛" required>
+          <el-input v-model="form.name" placeholder="请输入联赛名称" />
+        </el-form-item>
+
+        <el-form-item label="主队" required>
+          <el-input v-model="form.home_team" placeholder="请输入主队名称" />
+        </el-form-item>
+
+        <el-form-item label="客队" required>
+          <el-input v-model="form.visit_team" placeholder="请输入客队名称" />
+        </el-form-item>
+
+        <el-form-item label="比赛时间" required>
+          <el-input v-model="form.match_time" placeholder="如：2026-05-14 21:00:00" />
+        </el-form-item>
+
+        <el-form-item label="比分">
+          <el-input v-model="form.score" placeholder="如：2-1" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="showDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitForm">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -238,228 +189,9 @@ function cancelDelete() {
   color: #333;
 }
 
-.search-bar {
+.toolbar {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
-}
-
-.search-input {
-  width: 260px;
-  padding: 6px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.search-input:focus {
-  border-color: #1890ff;
-}
-
-.btn {
-  padding: 6px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: opacity 0.2s;
-}
-
-.btn:hover {
-  opacity: 0.85;
-}
-
-.btn-default {
-  background: #fff;
-  border-color: #d9d9d9;
-  color: #333;
-}
-
-.btn-primary {
-  background: #1890ff;
-  color: #fff;
-}
-
-.btn-danger {
-  background: #ff4d4f;
-  color: #fff;
-}
-
-.table-wrapper {
-  border: 1px solid #f0f0f0;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.data-table th,
-.data-table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.data-table th {
-  background: #fafafa;
-  font-weight: 600;
-  color: #333;
-}
-
-.data-table tr:last-child td {
-  border-bottom: none;
-}
-
-.data-table tbody tr:hover {
-  background: #f5f9ff;
-}
-
-.empty-tip {
-  text-align: center;
-  color: #999;
-  padding: 40px 0;
-}
-
-.btn-link {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 14px;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.btn-link:hover {
-  opacity: 0.75;
-}
-
-.btn-link.edit {
-  color: #1890ff;
-}
-
-.btn-link.delete {
-  color: #ff4d4f;
-}
-
-.divider {
-  color: #d9d9d9;
-  margin: 0 8px;
-}
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: #fff;
-  border-radius: 8px;
-  width: 520px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
-}
-
-.modal-sm {
-  width: 360px;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.modal-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin: 0;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: #999;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0;
-}
-
-.modal-close:hover {
-  color: #333;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-body p {
-  margin: 0;
-  color: #555;
-  font-size: 14px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 16px;
-}
-
-.form-item {
-  margin-bottom: 16px;
-}
-
-.form-item label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  color: #333;
-}
-
-.required {
-  color: #ff4d4f;
-}
-
-.form-item input,
-.form-item select {
-  width: 100%;
-  padding: 7px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.2s;
-  background: #fff;
-}
-
-.form-item input:focus,
-.form-item select:focus {
-  border-color: #1890ff;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 12px 20px;
-  border-top: 1px solid #f0f0f0;
-}
-.btn-warning {
-  background: #fa8c16;
-  color: #fff;
 }
 </style>

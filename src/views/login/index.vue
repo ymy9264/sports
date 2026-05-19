@@ -17,6 +17,7 @@
 import { ref } from 'vue'
 import { userLogin } from '@/api/auth'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 interface loginForm {
   username: string
@@ -24,13 +25,15 @@ interface loginForm {
 }
 
 const router = useRouter()
+const userStore = useUserStore()
 const loginData = ref<loginForm>({ username: '', password: '' })
 
 async function handleLogin() {
   const res = await userLogin(loginData.value)
+
   if (res.data.code === 0) {
-    localStorage.setItem('loginInfo',res.data.token)
-    router.push('/dashboard')
+  userStore.setUser(res.data.token, res.data.type, res.data.permissions)
+router.push('/dashboard')
   } else {
     alert('登录失败')
   }

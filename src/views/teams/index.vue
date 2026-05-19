@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTeams, addTeam, updateTeam, deleteTeam } from '@/api/teams'
 
 interface Team {
@@ -11,14 +12,35 @@ interface Team {
   founded: number
 }
 
-// 模拟数据
 const teamList = ref<Team[]>([])
-
-// 搜索
 const searchText = ref('')
+const showDialog = ref(false)
+const isEdit = ref(false)
+
+const emptyForm = (): Team => ({
+  id: 0,
+  name: '',
+  league: '',
+  city: '',
+  coach: '',
+  founded: new Date().getFullYear(),
+})
+
+const form = ref<Team>(emptyForm())
+
+onMounted(() => {
+  loadList()
+})
+
+async function loadList() {
+  const res = await getTeams()
+  teamList.value = res.data
+}
+
 const filteredList = computed(() => {
   const keyword = searchText.value.trim().toLowerCase()
   if (!keyword) return teamList.value
+
   return teamList.value.filter(
     (t) =>
       t.name.toLowerCase().includes(keyword) ||
@@ -27,195 +49,120 @@ const filteredList = computed(() => {
   )
 })
 
-// 弹窗
-const showModal = ref(false)
-const isEdit = ref(false)
-
-const emptyForm = (): Omit<Team, 'id'> => ({
-  name: '',
-  league: '',
-  city: '',
-  coach: '',
-  founded: new Date().getFullYear(),
-})
-
-const form = ref<Team>({ id: 0, ...emptyForm() })
-
-onMounted(async () => {
-  const res = await getTeams()
-  teamList.value = res.data
-})
-
 function openAdd() {
   isEdit.value = false
-  form.value = { id: 0, ...emptyForm() }
-  showModal.value = true
+  form.value = emptyForm()
+  showDialog.value = true
 }
 
-function openEdit(team: Team) {
+function openEdit(row: Team) {
   isEdit.value = true
-  form.value = { ...team }
-  showModal.value = true
-}
-
-function closeModal() {
-  showModal.value = false
+  form.value = { ...row }
+  showDialog.value = true
 }
 
 async function submitForm() {
   if (!form.value.name || !form.value.league || !form.value.city) {
-    alert('请填写必填项：球队名称、所属联赛、所在城市')
+    ElMessage.warning('请填写必填项：球队名称、所属联赛、所在城市')
     return
   }
-  if (isEdit.value) {
-    const res = await updateTeam(form.value)
-    if (res.data.code === 0) {
-      const resTeam = await getTeams()
-      teamList.value = resTeam.data
-    }
-  } else {
-    const res = await addTeam(form.value)
-    if (res.data.code === 0) {
-      const resTeam = await getTeams()
-      teamList.value = resTeam.data
-    }
+
+  const res = isEdit.value ? await updateTeam(form.value) : await addTeam(form.value)
+
+  if (res.data.code === 0) {
+    ElMessage.success(isEdit.value ? '修改成功' : '新增成功')
+    showDialog.value = false
+    await loadList()
   }
-  closeModal()
 }
 
-// 删除
-const deleteTargetId = ref<number | null>(null)
-const showDeleteConfirm = ref(false)
+async function handleDelete(id: number) {
+  try {
+    await ElMessageBox.confirm('确定要删除这支球队吗？此操作不可恢复。', '确认删除', {
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
 
-function openDelete(id: number) {
-  deleteTargetId.value = id
-  showDeleteConfirm.value = true
-}
+    const res = await deleteTeam(id)
 
-async function confirmDelete() {
-  if (deleteTargetId.value !== null) {
-    const res = await deleteTeam(deleteTargetId.value)
     if (res.data.code === 0) {
-      const resTeam = await getTeams()
-      teamList.value = resTeam.data
+      ElMessage.success('删除成功')
+      await loadList()
     }
+  } catch {
+    // 取消删除
   }
-  showDeleteConfirm.value = false
-  deleteTargetId.value = null
-}
-
-function cancelDelete() {
-  showDeleteConfirm.value = false
-  deleteTargetId.value = null
 }
 </script>
 
 <template>
   <div class="teams-page">
-    <!-- 页头 -->
     <div class="page-header">
       <h2>球队管理</h2>
     </div>
 
-    <!-- 搜索栏 -->
-    <div class="search-bar">
-      <input
-        v-model="searchText"
-        type="text"
-        placeholder="请输入球队名称、联赛或城市"
-        class="search-input"
-      />
-      <button class="btn btn-default">搜索</button>
-      <button class="btn btn-primary" @click="openAdd">新增球队</button>
-    </div>
+    <el-card>
+      <div class="toolbar">
+        <el-input
+          v-model="searchText"
+          placeholder="请输入球队名称、联赛或城市"
+          clearable
+          style="width: 280px"
+        />
 
-    <!-- 表格 -->
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>球队名称</th>
-            <th>所属联赛</th>
-            <th>所在城市</th>
-            <th>主教练</th>
-            <th>成立年份</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="filteredList.length === 0">
-            <td colspan="7" class="empty-tip">暂无数据</td>
-          </tr>
-          <tr v-for="team in filteredList" :key="team.id">
-            <td>{{ team.id }}</td>
-            <td>{{ team.name }}</td>
-            <td>{{ team.league }}</td>
-            <td>{{ team.city }}</td>
-            <td>{{ team.coach }}</td>
-            <td>{{ team.founded }}</td>
-            <td>
-              <button class="btn-link edit" @click="openEdit(team)">编辑</button>
-              <span class="divider">|</span>
-              <button class="btn-link delete" @click="openDelete(team.id)">删除</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 新增/编辑弹窗 -->
-    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-      <div class="modal">
-        <div class="modal-header">
-          <h3>{{ isEdit ? '编辑球队' : '新增球队' }}</h3>
-          <button class="modal-close" @click="closeModal">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-item">
-            <label>球队名称 <span class="required">*</span></label>
-            <input v-model="form.name" type="text" placeholder="请输入球队名称" />
-          </div>
-          <div class="form-item">
-            <label>所属联赛 <span class="required">*</span></label>
-            <input v-model="form.league" type="text" placeholder="如：NBA / 英超 / 中超" />
-          </div>
-          <div class="form-item">
-            <label>所在城市 <span class="required">*</span></label>
-            <input v-model="form.city" type="text" placeholder="请输入城市" />
-          </div>
-          <div class="form-item">
-            <label>主教练</label>
-            <input v-model="form.coach" type="text" placeholder="请输入主教练姓名" />
-          </div>
-          <div class="form-item">
-            <label>成立年份</label>
-            <input v-model.number="form.founded" type="number" placeholder="如：1947" />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-default" @click="closeModal">取消</button>
-          <button class="btn btn-primary" @click="submitForm">确定</button>
-        </div>
+        <el-button type="primary" @click="openAdd">新增球队</el-button>
       </div>
-    </div>
 
-    <!-- 删除确认弹窗 -->
-    <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="cancelDelete">
-      <div class="modal modal-sm">
-        <div class="modal-header">
-          <h3>确认删除</h3>
-          <button class="modal-close" @click="cancelDelete">✕</button>
-        </div>
-        <div class="modal-body">
-          <p>确定要删除这支球队吗？此操作不可恢复。</p>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-default" @click="cancelDelete">取消</button>
-          <button class="btn btn-danger" @click="confirmDelete">确认删除</button>
-        </div>
-      </div>
-    </div>
+      <el-table :data="filteredList" border stripe style="width: 100%">
+        <el-table-column prop="id" label="ID" width="80" sortable />
+        <el-table-column prop="name" label="球队名称" sortable />
+        <el-table-column prop="league" label="所属联赛" />
+        <el-table-column prop="city" label="所在城市" />
+        <el-table-column prop="coach" label="主教练" />
+        <el-table-column prop="founded" label="成立年份" width="120" sortable />
+
+        <el-table-column label="操作" width="160">
+          <template #default="{ row }">
+            <el-button type="primary" link @click="openEdit(row)">编辑</el-button>
+            <el-button type="danger" link @click="handleDelete(row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-dialog
+      v-model="showDialog"
+      :title="isEdit ? '编辑球队' : '新增球队'"
+      width="520px"
+    >
+      <el-form :model="form" label-width="90px">
+        <el-form-item label="球队名称" required>
+          <el-input v-model="form.name" placeholder="请输入球队名称" />
+        </el-form-item>
+
+        <el-form-item label="所属联赛" required>
+          <el-input v-model="form.league" placeholder="如：NBA / 英超 / 中超" />
+        </el-form-item>
+
+        <el-form-item label="所在城市" required>
+          <el-input v-model="form.city" placeholder="请输入城市" />
+        </el-form-item>
+
+        <el-form-item label="主教练">
+          <el-input v-model="form.coach" placeholder="请输入主教练姓名" />
+        </el-form-item>
+
+        <el-form-item label="成立年份">
+          <el-input-number v-model="form.founded" :min="1800" :max="2100" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="showDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitForm">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -234,221 +181,9 @@ function cancelDelete() {
   color: #333;
 }
 
-/* 搜索栏 */
-.search-bar {
+.toolbar {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
-}
-
-.search-input {
-  width: 260px;
-  padding: 6px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.search-input:focus {
-  border-color: #1890ff;
-}
-
-/* 按钮 */
-.btn {
-  padding: 6px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: opacity 0.2s;
-}
-
-.btn:hover {
-  opacity: 0.85;
-}
-
-.btn-default {
-  background: #fff;
-  border-color: #d9d9d9;
-  color: #333;
-}
-
-.btn-primary {
-  background: #1890ff;
-  color: #fff;
-}
-
-.btn-danger {
-  background: #ff4d4f;
-  color: #fff;
-}
-
-/* 表格 */
-.table-wrapper {
-  border: 1px solid #f0f0f0;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.data-table th,
-.data-table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.data-table th {
-  background: #fafafa;
-  font-weight: 600;
-  color: #333;
-}
-
-.data-table tr:last-child td {
-  border-bottom: none;
-}
-
-.data-table tbody tr:hover {
-  background: #f5f9ff;
-}
-
-.empty-tip {
-  text-align: center;
-  color: #999;
-  padding: 40px 0;
-}
-
-/* 操作按钮 */
-.btn-link {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 14px;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.btn-link:hover {
-  opacity: 0.75;
-}
-
-.btn-link.edit {
-  color: #1890ff;
-}
-
-.btn-link.delete {
-  color: #ff4d4f;
-}
-
-.divider {
-  color: #d9d9d9;
-  margin: 0 8px;
-}
-
-/* 弹窗 */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: #fff;
-  border-radius: 8px;
-  width: 480px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
-}
-
-.modal-sm {
-  width: 360px;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.modal-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin: 0;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: #999;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0;
-}
-
-.modal-close:hover {
-  color: #333;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-body p {
-  margin: 0;
-  color: #555;
-  font-size: 14px;
-}
-
-/* 表单 */
-.form-item {
-  margin-bottom: 16px;
-}
-
-.form-item label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  color: #333;
-}
-
-.required {
-  color: #ff4d4f;
-}
-
-.form-item input {
-  width: 100%;
-  padding: 7px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.2s;
-}
-
-.form-item input:focus {
-  border-color: #1890ff;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 12px 20px;
-  border-top: 1px solid #f0f0f0;
 }
 </style>

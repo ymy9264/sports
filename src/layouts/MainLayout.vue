@@ -14,19 +14,19 @@
           首页
         </el-menu-item>
 
-        <el-menu-item index="/matches">
+        <el-menu-item v-if="userStore.userType === 'admin' || userStore.permission.includes('matches')"  index="/matches">
           比赛管理
         </el-menu-item>
 
-        <el-menu-item index="/teams">
+        <el-menu-item v-if="userStore.userType === 'admin' || userStore.permission.includes('teams')"  index="/teams">
           球队管理
         </el-menu-item>
 
-        <el-menu-item index="/players">
+        <el-menu-item v-if="userStore.userType === 'admin' || userStore.permission.includes('players')"  index="/players">
           球员管理
         </el-menu-item>
 
-          <el-menu-item index="/users">
+          <el-menu-item v-if="userStore.userType === 'admin' || userStore.permission.includes('users')" index="/users">
           用户管理
         </el-menu-item>
       </el-menu>
@@ -48,12 +48,14 @@
 
 <script setup lang="ts">
 import { RouterView,useRoute,useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
 function handleLogout() {
-  localStorage.removeItem('loginInfo')
+  userStore.logout()
   router.push('/login')
 }
 </script>
