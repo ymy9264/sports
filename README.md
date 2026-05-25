@@ -17,7 +17,7 @@
 - ThinkPHP 6.1
 - MySQL
 - JWT 身份验证
-- PHP cURL 爬虫
+- PHP 数据采集
 
 ## 主要功能
 
