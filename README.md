@@ -34,7 +34,7 @@
 <img width="1330" height="914" alt="image" src="https://github.com/user-attachments/assets/94bc8c33-0586-422b-b441-51b4a03aa700" />
 <img width="1318" height="891" alt="image" src="https://github.com/user-attachments/assets/bc103b56-fc6c-4cfb-8abe-b15f8a3ed364" />
 <img width="1292" height="919" alt="image" src="https://github.com/user-attachments/assets/a9b779a8-b540-4ab8-ad24-a4722a54257b" />
-<img width="1321" height="689" alt="image" src="https://github.com/user-attachments/assets/03a0cee5-6b47-4103-9a61-120108a8f398" />
+<img width="1338" height="601" alt="image" src="https://github.com/user-attachments/assets/c58df453-f8a6-4631-a777-d9f0896a1a39" />
 
 ## 本地运行
 
