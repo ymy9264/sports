@@ -27,7 +27,7 @@
     <el-card shadow="never" class="chart-card">
       <template #header>
         <div class="chart-header">
-          各联赛球队数量
+          各联赛比赛数量
         </div>
       </template>
 
@@ -39,6 +39,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import * as echarts from 'echarts'
+import { getDashboard } from '@/api/dashboard'
 
 interface Card {
   id: number
@@ -47,57 +48,57 @@ interface Card {
   unit: string
 }
 
+interface LeagueItem {
+  name: string
+  total: number
+}
+
+
 const cards = ref<Card[]>([
   { id: 1, title: '比赛总数', amount: 8, unit: '场' },
   { id: 2, title: '球队总数', amount: 10, unit: '队' },
   { id: 3, title: '球员总数', amount: 20, unit: '人' },
-  { id: 4, title: '进行中比赛数', amount: 2, unit: '场' },
+    { id: 4, title: '今日比赛总数', amount: 20, unit: '场' },
+
 ])
+
+
 
 const chartRef = ref<HTMLElement | null>(null)
 
-onMounted(() => {
-  if (!chartRef.value) return
+onMounted(async() => {
+   const res = await getDashboard()
+  cards.value[0]!.amount = res.data.match
+  cards.value[1]!.amount = res.data.team
+  cards.value[2]!.amount = res.data.player
+  cards.value[3]!.amount = res.data.todayMatch
 
+  if (!chartRef.value) return
   const chart = echarts.init(chartRef.value)
 
-  chart.setOption({
-    tooltip: {
-      trigger: 'axis',
-    },
 
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true,
-    },
-
-    xAxis: {
-      type: 'category',
-      data: ['NBA', '英超', '中超', '西甲'],
-      axisTick: {
-        alignWithLabel: true,
-      },
-    },
-
-    yAxis: {
-      type: 'value',
-    },
-
-    series: [
-      {
-        name: '球队数量',
-        type: 'bar',
-        barWidth: '45%',
-        data: [10, 8, 16, 12],
-
-        itemStyle: {
-          borderRadius: [6, 6, 0, 0],
-        },
-      },
-    ],
-  })
+ chart.setOption({
+  tooltip: {
+    trigger: 'item',
+    formatter: '{b}: {c}场 ({d}%)'
+  },
+  series: [{
+    name: '今日比赛',
+    type: 'pie',
+    radius: '60%',
+    data: res.data.todayLeague.map((item: LeagueItem) => ({
+      name: item.name,
+      value: item.total
+    })),
+    emphasis: {
+      itemStyle: {
+        shadowBlur: 10,
+        shadowOffsetX: 0,
+        shadowColor: 'rgba(0, 0, 0, 0.5)'
+      }
+    }
+  }]
+})
 
   window.addEventListener('resize', () => {
     chart.resize()
