@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref,  onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTeams, addTeam, updateTeam, deleteTeam } from '@/api/teams'
 
@@ -11,9 +11,13 @@ interface Team {
 }
 
 const teamList = ref<Team[]>([])
-const searchText = ref('')
+const keyword = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
+
+const currentPage = ref(1)
+const pageSize = ref(12)
+const total = ref(0)
 
 const emptyForm = (): Team => ({
   id: 0,
@@ -29,21 +33,11 @@ onMounted(() => {
 })
 
 async function loadList() {
-  const res = await getTeams()
-  teamList.value = res.data
+ const res = await getTeams(currentPage.value, pageSize.value,keyword.value)
+  teamList.value = res.data.list
+  total.value = res.data.total
 }
 
-const filteredList = computed(() => {
-  const keyword = searchText.value.trim().toLowerCase()
-  if (!keyword) return teamList.value
-
-  return teamList.value.filter(
-    (t) =>
-      t.team_cn.toLowerCase().includes(keyword) ||
-      t.team_en.toLowerCase().includes(keyword) ||
-      t.league.toLowerCase().includes(keyword),
-  )
-})
 
 function openAdd() {
   isEdit.value = false
@@ -90,6 +84,17 @@ async function handleDelete(id: number) {
     // 用户点取消，不处理
   }
 }
+
+async function handlePageChange(page: number) {
+  currentPage.value = page
+  await loadList()
+}
+
+async function handleSearch() {
+  currentPage.value = 1
+  await loadList()
+}
+
 </script>
 
 <template>
@@ -100,16 +105,18 @@ async function handleDelete(id: number) {
 
     <div class="search-bar">
       <el-input
-        v-model="searchText"
+        v-model="keyword"
         placeholder="请输入球队名称或联赛"
         clearable
         style="width: 260px"
+        @change = handleSearch
       />
 
       <el-button type="primary" @click="openAdd">新增球队</el-button>
     </div>
 
-    <el-table  :data="filteredList" border stripe style="width: 100%" >
+    <el-card>
+    <el-table  :data="teamList" border stripe style="width: 100%" >
       <el-table-column prop="id" label="ID" width="80" sortable />
       <el-table-column prop="team_cn" label="中文名" sortable />
       <el-table-column prop="team_en" label="英文名" sortable/>
@@ -122,6 +129,14 @@ async function handleDelete(id: number) {
         </template>
       </el-table-column>
     </el-table>
+     <el-pagination
+  v-model:current-page="currentPage"
+  :page-size="pageSize"
+  :total="total"
+  layout="total, prev, pager, next"
+  @current-change="handlePageChange"
+/>
+    </el-card>
 
     <el-dialog
       v-model="dialogVisible"
@@ -141,6 +156,8 @@ async function handleDelete(id: number) {
           <el-input v-model="form.league" placeholder="如：英超 / 意甲" />
         </el-form-item>
       </el-form>
+
+      
 
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>

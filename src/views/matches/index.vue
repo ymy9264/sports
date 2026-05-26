@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getMatches, addMatch, updateMatch, deleteMatch } from '@/api/matches'
 import { crawlerMatches } from '@/api/crawler'
@@ -18,6 +18,10 @@ const keyword = ref('')
 const showDialog = ref(false)
 const isEdit = ref(false)
 
+const currentPage = ref(1)
+const pageSize = ref(12)
+const total = ref(0)
+
 const emptyForm = (): Match => ({
   id: 0,
   name: '',
@@ -34,21 +38,12 @@ onMounted(() => {
 })
 
 async function loadList() {
-  const res = await getMatches()
-  matchList.value = res.data
+   const res = await getMatches(currentPage.value, pageSize.value,keyword.value)
+  matchList.value = res.data.list
+  total.value = res.data.total
 }
 
-const filteredList = computed(() => {
-  const k = keyword.value.trim().toLowerCase()
-  if (!k) return matchList.value
 
-  return matchList.value.filter(
-    (m) =>
-      m.name.toLowerCase().includes(k) ||
-      m.home_team.toLowerCase().includes(k) ||
-      m.visit_team.toLowerCase().includes(k),
-  )
-})
 
 function openAdd() {
   isEdit.value = false
@@ -101,6 +96,17 @@ async function fetchData() {
   await loadList()
   ElMessage.success('数据更新成功')
 }
+
+async function handlePageChange(page: number) {
+  currentPage.value = page
+  await loadList()
+}
+
+async function handleSearch() {
+  currentPage.value = 1
+  await loadList()
+}
+
 </script>
 
 <template>
@@ -116,13 +122,14 @@ async function fetchData() {
           placeholder="请输入联赛或球队名称"
           clearable
           style="width: 260px"
+          @change = "handleSearch()"
         />
 
         <el-button type="primary" @click="openAdd">新增比赛</el-button>
         <el-button type="warning" @click="fetchData">更新数据</el-button>
       </div>
 
-      <el-table :data="filteredList" border stripe style="width: 100%">
+      <el-table :data="matchList" border stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" sortable />
         <el-table-column prop="name" label="联赛" />
         <el-table-column prop="home_team" label="主队" />
@@ -137,6 +144,14 @@ async function fetchData() {
           </template>
         </el-table-column>
       </el-table>
+
+      <el-pagination
+  v-model:current-page="currentPage"
+  :page-size="pageSize"
+  :total="total"
+  layout="total, prev, pager, next"
+  @current-change="handlePageChange"
+/>
     </el-card>
 
     <el-dialog

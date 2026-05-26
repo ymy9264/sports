@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getPlayers, addPlayer, updatePlayer, deletePlayer } from '@/api/players'
 
@@ -20,6 +20,10 @@ const keyword = ref('')
 const showDialog = ref(false)
 const isEdit = ref(false)
 
+const currentPage = ref(1)
+const pageSize = ref(12)
+const total = ref(0)
+
 const emptyForm = (): Player => ({
   id: 0,
   name: '',
@@ -37,20 +41,11 @@ onMounted(() => {
 })
 
 async function loadList() {
-  const res = await getPlayers()
-  playerList.value = res.data
+   const res = await getPlayers(currentPage.value, pageSize.value,keyword.value)
+  playerList.value = res.data.list
+  total.value = res.data.total
 }
 
-const filteredList = computed(() => {
-  const k = keyword.value.trim().toLowerCase()
-  if (!k) return playerList.value
-  return playerList.value.filter(
-    (p) =>
-      p.name.toLowerCase().includes(k) ||
-      p.team.toLowerCase().includes(k) ||
-      p.nationality.toLowerCase().includes(k),
-  )
-})
 
 function openAdd() {
   isEdit.value = false
@@ -93,6 +88,17 @@ async function handleDelete(id: number) {
     // 取消删除
   }
 }
+
+async function handlePageChange(page: number) {
+  currentPage.value = page
+  await loadList()
+}
+
+async function handleSearch() {
+  currentPage.value = 1
+  await loadList()
+}
+
 </script>
 
 <template>
@@ -108,11 +114,12 @@ async function handleDelete(id: number) {
           placeholder="请输入球员姓名、球队或国籍"
           clearable
           style="width: 280px"
+          @change = "handleSearch()"
         />
         <el-button type="primary" @click="openAdd">新增球员</el-button>
       </div>
 
-      <el-table :data="filteredList" border stripe style="width: 100%">
+      <el-table :data="playerList" border stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" sortable />
         <el-table-column prop="name" label="姓名" sortable />
         <el-table-column prop="team" label="所属球队" />
@@ -136,6 +143,14 @@ async function handleDelete(id: number) {
           </template>
         </el-table-column>
       </el-table>
+
+        <el-pagination
+  v-model:current-page="currentPage"
+  :page-size="pageSize"
+  :total="total"
+  layout="total, prev, pager, next"
+  @current-change="handlePageChange"
+/>
     </el-card>
 
     <el-dialog

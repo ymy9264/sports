@@ -1,7 +1,7 @@
 import request from "./request"
 
-export function getTeams() {
-  return request.get(`/api/teams`)
+export function getTeams(page=1,pageSize = 10,keyword='') {
+  return request.get(`/api/teams`,{ params:{ page,pageSize,keyword } })
 }
 
 export function addTeam(data: object) {

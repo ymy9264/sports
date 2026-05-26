@@ -1,7 +1,7 @@
 import request from "./request"
 
-export function getMatches(){
-  return request.get(`/api/matches`)
+export function getMatches(page=1,pageSize = 10,keyword=''){
+  return request.get(`/api/matches`,{ params:{ page,pageSize,keyword } })
 }
 
 export function addMatch(data: object){
