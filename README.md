@@ -28,6 +28,14 @@
 - 球队管理：增删改查，支持按联赛采集球队数据
 - 球员管理：增删改查，支持按球队采集球员数据
 - 数据看板：统计卡片 + ECharts 图表
+
+## 项目截图
+<img width="1313" height="875" alt="image" src="https://github.com/user-attachments/assets/c0847f2e-ab77-48d4-9156-eae71f39d810" />
+<img width="1330" height="914" alt="image" src="https://github.com/user-attachments/assets/94bc8c33-0586-422b-b441-51b4a03aa700" />
+<img width="1318" height="891" alt="image" src="https://github.com/user-attachments/assets/bc103b56-fc6c-4cfb-8abe-b15f8a3ed364" />
+<img width="1292" height="919" alt="image" src="https://github.com/user-attachments/assets/a9b779a8-b540-4ab8-ad24-a4722a54257b" />
+<img width="1321" height="689" alt="image" src="https://github.com/user-attachments/assets/03a0cee5-6b47-4103-9a61-120108a8f398" />
+
 ## 本地运行
 
 ### 前端
