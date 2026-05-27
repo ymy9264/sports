@@ -1,48 +1,58 @@
-# sports
+# 游梦体育 YouMeng Sports
 
-This template should help get you started developing with Vue 3 in Vite.
+一个基于 Vue3 + ThinkPHP 的体育赛事后台管理系统，支持足球比赛数据的管理与自动抓取。
 
-## Recommended IDE Setup
+## 技术栈
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+**前端**
+- Vue 3 + TypeScript
+- Vue Router
+- Pinia
+- Axios
+- ECharts
+- Element Plus
+- Vite
 
-## Recommended Browser Setup
+**后端**
+- ThinkPHP 6.1
+- MySQL
+- JWT 身份验证
+- PHP 数据采集
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+## 主要功能
 
-## Type Support for `.vue` Imports in TS
+- 登录鉴权：JWT Token 认证，axios 拦截器自动携带 Token，后端中间件统一验证
+- 权限控制：admin 可管理所有模块，normal 用户仅可访问被授权的模块，路由守卫拦截未授权访问
+- 用户管理：新增/编辑/删除普通用户，支持启用/禁用
+- 比赛管理：增删改查，支持一键采集当日足球比赛数据
+- 球队管理：增删改查，支持按联赛采集球队数据
+- 球员管理：增删改查，支持按球队采集球员数据
+- 数据看板：统计卡片 + ECharts 图表
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+## 项目截图
+<img width="1313" height="875" alt="image" src="https://github.com/user-attachments/assets/c0847f2e-ab77-48d4-9156-eae71f39d810" />
+<img width="1330" height="914" alt="image" src="https://github.com/user-attachments/assets/94bc8c33-0586-422b-b441-51b4a03aa700" />
+<img width="1318" height="891" alt="image" src="https://github.com/user-attachments/assets/bc103b56-fc6c-4cfb-8abe-b15f8a3ed364" />
+<img width="1292" height="919" alt="image" src="https://github.com/user-attachments/assets/a9b779a8-b540-4ab8-ad24-a4722a54257b" />
+<img width="1338" height="601" alt="image" src="https://github.com/user-attachments/assets/c58df453-f8a6-4631-a777-d9f0896a1a39" />
 
-## Customize configuration
+## 本地运行
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+### 前端
 
-## Project Setup
-
-```sh
+```bash
+# 安装依赖
 npm install
-```
 
-### Compile and Hot-Reload for Development
-
-```sh
+# 启动开发服务器
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+### 跨域配置
 
-```sh
-npm run build
-```
+开发环境通过 Vite proxy 解决跨域，配置见 `vite.config.ts`。
 
-### Lint with [ESLint](https://eslint.org/)
+生产环境需在后端开启 CORS 中间件。
 
-```sh
-npm run lint
-```
+
+
