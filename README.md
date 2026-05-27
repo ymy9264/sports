@@ -1,6 +1,7 @@
 # 游梦体育 YouMeng Sports
 
-一个基于 Vue3 + ThinkPHP 的体育赛事后台管理系统，支持足球比赛数据的管理与自动抓取。
+一个基于 Vue3 + ThinkPHP 的体育赛事后台管理系统。
+用于模拟真实后台开发流程，包含权限控制、数据管理与真实数据采集功能。
 
 ## 技术栈
 
@@ -17,7 +18,7 @@
 - ThinkPHP 6.1
 - MySQL
 - JWT 身份验证
-- PHP 数据采集
+- PHP cURL 数据采集
 
 ## 主要功能
 
@@ -47,6 +48,33 @@ npm install
 # 启动开发服务器
 npm run dev
 ```
+
+### 后端
+
+1. 安装 [phpstudy](https://www.xp.cn/)，启动 Nginx 和 MySQL
+2. 将 `sports-api` 目录放到 phpstudy 的 WWW 目录下
+3. 网站根目录指向 `sports-api/public`
+4. 复制 `.example.env` 为 `.env`，填写数据库配置：
+
+```env
+[DATABASE]
+TYPE = mysql
+HOSTNAME = 127.0.0.1
+DATABASE = sports
+USERNAME = ymy
+PASSWORD = 123456
+HOSTPORT = 3306
+CHARSET = utf8mb4
+```
+
+5. 安装 PHP 依赖：
+
+```bash
+cd sports-api
+composer install
+```
+
+6. 导入数据库文件 `database/sports.sql`
 
 ### 跨域配置
 
