@@ -37,44 +37,9 @@
 <img width="1292" height="919" alt="image" src="https://github.com/user-attachments/assets/a9b779a8-b540-4ab8-ad24-a4722a54257b" />
 <img width="1338" height="601" alt="image" src="https://github.com/user-attachments/assets/c58df453-f8a6-4631-a777-d9f0896a1a39" />
 
-## 本地运行
+## 演示地址
 
-### 前端
-
-```bash
-# 安装依赖
-npm install
-
-# 启动开发服务器
-npm run dev
-```
-
-### 后端
-
-1. 安装 [phpstudy](https://www.xp.cn/)，启动 Nginx 和 MySQL
-2. 将 `sports-api` 目录放到 phpstudy 的 WWW 目录下
-3. 网站根目录指向 `sports-api/public`
-4. 复制 `.example.env` 为 `.env`，填写数据库配置：
-
-```env
-[DATABASE]
-TYPE = mysql
-HOSTNAME = 127.0.0.1
-DATABASE = sports
-USERNAME = ymy
-PASSWORD = 123456
-HOSTPORT = 3306
-CHARSET = utf8mb4
-```
-
-5. 安装 PHP 依赖：
-
-```bash
-cd sports-api
-composer install
-```
-
-6. 导入数据库文件 `database/sports.sql`
+http://82.157.207.85/
 
 ### 跨域配置
 
